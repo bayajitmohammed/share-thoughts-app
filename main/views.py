@@ -1,6 +1,7 @@
 import json
 import re
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
+from django.conf import settings
 from django.db.models import Count
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
@@ -75,6 +76,8 @@ def logout_user(request):
     return redirect('index')
 
 def forgot_password(request):
+    if not settings.DEBUG:
+        raise Http404('Password reset is unavailable.')
     if request.user.is_authenticated:
         return redirect('index')
         

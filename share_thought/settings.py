@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,11 +39,26 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool('DEBUG', True)
 
+if not DEBUG and (not os.environ.get('SECRET_KEY') or SECRET_KEY.startswith('django-insecure-')):
+    raise ImproperlyConfigured('Set a secure SECRET_KEY when DEBUG=False.')
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get('ALLOWED_HOSTS', '').split(',')
     if host.strip()
 ]
+
+if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
+    ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+
+if env_bool('TRUST_PROXY_HEADERS'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -58,6 +75,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -97,6 +115,13 @@ DATABASES = {
     }
 }
 
+if os.environ.get('DATABASE_URL'):
+    DATABASES['default'] = dj_database_url.parse(
+        os.environ['DATABASE_URL'], conn_max_age=60, conn_health_checks=True
+    )
+elif env_bool('RENDER'):
+    raise ImproperlyConfigured('DATABASE_URL is required on Render.')
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -132,10 +157,17 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+SERVE_MEDIA = env_bool('SERVE_MEDIA', False)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

@@ -21,6 +21,8 @@ You can still view the original version of this project on the [legacy](https://
 
 ## Getting Started
 
+For hosting, follow the [Render deployment guide](docs/deploy-render.md). It uses Docker, PostgreSQL, and temporary local storage for demo uploads while keeping the local setup below unchanged.
+
 ### Prerequisites
 - Python 3.13+ (for non-docker setup)
 - Docker & Docker Compose (for docker setup)
